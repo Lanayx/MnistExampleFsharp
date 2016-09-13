@@ -10,5 +10,5 @@ open MathNet.Numerics
 [<EntryPoint>]
 let main argv =
     Control.UseNativeMKL()
-    let data = DataLoader.load()
-    0 
+    let data = DataLoader.Load()
+    0
