@@ -12,7 +12,7 @@ let GetRawData imagesCount (pixels: float[]) (brImages: BinaryReader) (brLabels:
     for di in 1..imagesCount do
         for i in 0..27 do
             for j in 0..27 do
-                pixels.[i*28 + j] <- (float (brImages.ReadByte()))
+                pixels.[i*28 + j] <- (float (brImages.ReadByte()))/255.0
         let lbl = brLabels.ReadByte();
         yield(DenseVector.OfArray(pixels), GetVectorFromNumber((int lbl)))
 }
