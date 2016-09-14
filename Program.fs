@@ -10,5 +10,6 @@ open MathNet.Numerics
 [<EntryPoint>]
 let main argv =
     Control.UseNativeMKL()
-    let data = DataLoader.Load()
+    let (trainData, testData)  = DataLoader.Load()
+    printfn "Main %d - %d" trainData.Length testData.Length
     0
