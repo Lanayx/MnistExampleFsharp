@@ -6,10 +6,12 @@
 module Program
 
 open MathNet.Numerics
+open Network
 
 [<EntryPoint>]
 let main argv =
     Control.UseNativeMKL()
-    let (trainData, testData)  = DataLoader.Load()
-    printfn "Main %d - %d" trainData.Length testData.Length
+    let trainData, testData  = DataLoader.Load()
+    let net = Network([784; 30; 10])
+    net.SGD(trainData, 30, 10, 3.0, testData)
     0
