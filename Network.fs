@@ -30,7 +30,7 @@ type Network(sizes: int List) =
 
         let SigmoidPrime(z:Vector<double>) =
 //            """Derivative of the sigmoid function."""
-            Sigmoid(z).PointwiseMultiply(1- Sigmoid(z));
+            Sigmoid(z).PointwiseMultiply(1.0-Sigmoid(z));
 
 
 
