@@ -1,6 +1,6 @@
 ﻿module Network
 
-open MathNet.Numerics.LinearAlgebra.Double
+open MathNet.Numerics.LinearAlgebra
 open MathNet.Numerics.Distributions
 
 type Network(sizes: int List) =
@@ -22,6 +22,29 @@ type Network(sizes: int List) =
         let weights = List.zip (List.take(numLayers-1) sizes) sizes.Tail |>
                       List.map (fun (sizeLeft, sizeRight) ->
                       Matrix.Build.Random(sizeRight, sizeLeft, new Normal()))
+
+//        #### Miscellaneous functions
+        let Sigmoid(z:Vector<double>) =
+//            """The sigmoid function."""
+            1.0/(1.0+(-z).PointwiseExp())
+
+        let SigmoidPrime(z:Vector<double>) =
+//            """Derivative of the sigmoid function."""
+            Sigmoid(z).PointwiseMultiply(1- Sigmoid(z));
+
+
+
+        let feedforward(a:Vector<double>) =
+//            """Return the output of the network if ``a`` is input."""           
+            let rec ff l a =
+                 match l with
+                 | [] -> a
+                 | (b,w)::tail -> ff tail (Sigmoid(w*a + b))
+
+            ff (List.zip biases weights) a
+
+
+
 
         member x.SGD (training_data, epochs, mini_batch_size, eta, test_data) =
             printf "Hello\n"
