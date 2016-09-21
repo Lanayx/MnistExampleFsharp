@@ -1,5 +1,6 @@
 ﻿module Network
 
+
 open MathNet.Numerics.LinearAlgebra
 open MathNet.Numerics.Distributions
 
@@ -17,11 +18,11 @@ type Network(sizes: int List) =
         //        ever used in computing the outputs from later layers."
         let numLayers = sizes.Length
         let sizes = sizes
-        let biases = sizes.Tail |>
-                     List.map (fun size -> Vector.Build.Random(size, new Normal()))
-        let weights = List.zip (List.take(numLayers-1) sizes) sizes.Tail |>
-                      List.map (fun (sizeLeft, sizeRight) ->
-                      Matrix.Build.Random(sizeRight, sizeLeft, new Normal()))
+        let mutable biases = sizes.Tail |>
+                             List.map (fun size -> Vector.Build.Random(size, new Normal()))
+        let mutable weights = List.zip (List.take(numLayers-1) sizes) sizes.Tail |>
+                              List.map (fun (sizeLeft, sizeRight) ->
+                              Matrix.Build.Random(sizeRight, sizeLeft, new Normal()))
 
 //        #### Miscellaneous functions
         let Sigmoid(z:Vector<double>) =
@@ -32,10 +33,33 @@ type Network(sizes: int List) =
 //            """Derivative of the sigmoid function."""
             Sigmoid(z).PointwiseMultiply(1.0-Sigmoid(z));
 
+        let Update_mini_batch (mini_batch: (Vector<double>*Matrix<double>) list) (eta: double) =
+//            """Update the network's weights and biases by applying
+//            gradient descent using backpropagation to a single mini batch.
+//            The ``mini_batch`` is a list of tuples ``(x, y)``, and ``eta``
+//            is the learning rate."""
 
+            let nabla_b_init = biases |> List.map(fun b -> Vector<double>.Build.Dense(b.Count));
+            let nabla_w_init = weights|> List.map(fun w -> Matrix<double>.Build.Dense(w.RowCount,w.ColumnCount));
 
-        let feedforward(a:Vector<double>) =
-//            """Return the output of the network if ``a`` is input."""           
+            let rec calculateNablas (mini_batch: (Vector<double>*Matrix<double>) list) (nabla_b: Vector<double> list) (nabla_w: Matrix<double> list) =
+                 match mini_batch with
+                 | [] -> (nabla_b, nabla_w)
+                 | (x,y)::tail ->
+                    let (delta_nabla_b, delta_nabla_w) = Backprop(x, y)
+                    let n_b = List.zip nabla_b delta_nabla_b |> List.map(fun (nb, dnb) -> (nb + dnb))
+                    let n_w = List.zip nabla_w delta_nabla_w |> List.map(fun (nw, dnw) -> (nw + dnw))
+                    calculateNablas tail n_b n_w
+
+            let (nabla_b, nabla_w) = calculateNablas mini_batch nabla_b_init nabla_w_init
+
+            weights <- List.zip weights nabla_w |>
+                       List.map(fun (w, nw) -> w-(eta/(double)mini_batch.Length)*nw)
+            biases <- List.zip biases nabla_b |>
+                      List.map(fun (b, nb) -> b-(eta/(double)mini_batch.Length)*nb)
+
+        let Feedforward(a:Vector<double>) =
+//            """Return the output of the network if ``a`` is input."""
             let rec ff l a =
                  match l with
                  | [] -> a
