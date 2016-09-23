@@ -112,7 +112,7 @@ type Network(sizes: int List) =
             ff (List.zip biases weights) a
 
 
-        let evaluate(self, test_data: (Vector<double>*Vector<double>) list) =
+        let Evaluate(test_data: (Vector<double>*Vector<double>) []) =
     //        """Return the number of test inputs for which the neural
     //        network outputs the correct result. Note that the neural
     //        network's output is assumed to be the index of whichever
@@ -121,7 +121,16 @@ type Network(sizes: int List) =
                                 |> List.map(fun (i1,i2) -> if i1 = i2 then 1 else 0 )
              List.sum test_results
 
-        member x.SGD (training_data, epochs, mini_batch_size, eta, test_data) =
+        // shuffle an array (in-place)
+        let shuffle a (rand:Random) =
+            let swap (a: _[]) x y =
+                let tmp = a.[x]
+                a.[x] <- a.[y]
+                a.[y] <- tmp
+            Array.iteri (fun i _ -> swap a i (rand.Next(i, Array.length a))) a
+            Array.toList a
+
+        member x.SGD (training_data: _ [], epochs, mini_batch_size, eta, test_data: _ []) =
 //            """Train the neural network using mini-batch stochastic
 //            gradient descent.  The ``training_data`` is a list of tuples
 //            ``(x, y)`` representing the training inputs and the desired
@@ -132,19 +141,16 @@ type Network(sizes: int List) =
 //            tracking progress, but slows things down substantially."""
 
             let rnd = new Random();
-            let timer = DateTime.Now;
+            let startTime = DateTime.Now;
 
-            let n_test = if test_data != null then test_data.Length else 0
+            let n_test = test_data.Length
             let n = training_data.Length
-            for j in xrange(epochs) do
+            for j in [1..epochs] do
                 let shuffledTrainingData = shuffle training_data rnd
-                mini_batches = [training_data[k:k+mini_batch_size] for k in xrange(0, n, mini_batch_size)]
-                for mini_batch in mini_batches:
-                    self.update_mini_batch(mini_batch, eta)
-                if test_data:
-                    print "Epoch {0}: {1} / {2} ({3})".format(
-                        j, self.evaluate(test_data), n_test, (time.time() - start_time))
-                else:
-                print "Epoch {0} complete".format(j)
+                let mini_batches = List.chunkBySize mini_batch_size shuffledTrainingData
+                for mini_batch in mini_batches do
+                    Update_mini_batch mini_batch eta
+                printf "Epoch %d: %d / %d (%f) \n" j (Evaluate(test_data)) n_test (DateTime.Now - startTime).TotalSeconds
 
-                //todo use list partition previously adding tuples to list with random numbers and %
+
+

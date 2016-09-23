@@ -1,12 +1,12 @@
 ﻿module DataLoader
 
 open System.IO
-open MathNet.Numerics.LinearAlgebra.Double
+open MathNet.Numerics.LinearAlgebra
 
 let GetVectorFromNumber lbl =
     let array = Array.create 10 0.0
     array.[lbl] <- float 1
-    DenseVector.OfArray(array)
+    Vector.Build.DenseOfArray(array)
 
 let GetRawData imagesCount (pixels: float[]) (brImages: BinaryReader) (brLabels: BinaryReader) = seq {
     for di in 1..imagesCount do
@@ -14,7 +14,7 @@ let GetRawData imagesCount (pixels: float[]) (brImages: BinaryReader) (brLabels:
             for j in 0..27 do
                 pixels.[i*28 + j] <- float(brImages.ReadByte())/255.0
         let lbl = brLabels.ReadByte();
-        yield(DenseVector.OfArray(pixels), GetVectorFromNumber(int lbl))
+        yield((Vector.Build.DenseOfArray(pixels)), GetVectorFromNumber(int lbl))
 }
 
 let LoadData imagesFile labelsFile imagesCount =
@@ -29,7 +29,7 @@ let LoadData imagesFile labelsFile imagesCount =
     let magic2 = brLabels.ReadInt32()
     let numLabels = brLabels.ReadInt32()
     let pixels = Array.create 784 0.0
-    let data = Seq.toList (GetRawData imagesCount pixels brImages brLabels)
+    let data = Seq.toArray (GetRawData imagesCount pixels brImages brLabels)
 
     ifsImages.Close()
     brImages.Close()

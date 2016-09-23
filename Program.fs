@@ -11,6 +11,8 @@ open Network
 [<EntryPoint>]
 let main argv =
     Control.UseNativeMKL()
+
+    printf "%A \n" (Control.LinearAlgebraProvider)
     let trainData, testData  = DataLoader.Load()
     let net = Network([784; 30; 10])
     net.SGD(trainData, 30, 10, 3.0, testData)
