@@ -1,6 +1,6 @@
 ﻿module Network
 
-
+open System
 open MathNet.Numerics.LinearAlgebra
 open MathNet.Numerics.Distributions
 
@@ -52,25 +52,25 @@ type Network(sizes: int List) =
             let rec ffstart (biasesAndWeights: (Vector<double>*Matrix<double>) list) (zs: Vector<double> list)  (activations: Vector<double> list) (activation : Vector<double>) =
                 match biasesAndWeights with
                 | [] -> (zs, activations)
-                | (b,w)::tail -> 
+                | (b,w)::tail ->
                     let z = w*activation+b
                     let a = Sigmoid(z)
                     ffstart tail (z::zs) (a::activations) a
-             
+
             let biasesAndWeights = List.zip biases weights
             let zs, activations = ffstart biasesAndWeights [] [x] x  //zs and activations are reverted
 
             //# backward pass
             let delta_init = (CostDerivative activations.Head y).PointwiseMultiply(SigmoidPrime(zs.Head))
             let nabla_b_init = [ delta_init ]
-            let nabla_w_init = [ delta_init.ToColumnMatrix() * activations.Tail.Head.ToRowMatrix() ];
+            let nabla_w_init = [ delta_init.ToColumnMatrix() * activations.Tail.Head.ToRowMatrix()];
 
             let zsActivationsAndWeights = List.zip3 (zs.Tail) (activations.Tail.Tail) (List.rev weights.Tail)
 
             let rec ffend (zaw: (Vector<double>*Vector<double>*Matrix<double>) list) (delta : Vector<double>) nb nw =
                 match zaw with
                 | [] -> (nb, nw)
-                | (z, a, w)::tail -> 
+                | (z, a, w)::tail ->
                     let sp = SigmoidPrime(z)
                     let deltaNew = (w.Transpose()*delta).PointwiseMultiply(sp)
                     let nabla_b = deltaNew
@@ -112,5 +112,39 @@ type Network(sizes: int List) =
             ff (List.zip biases weights) a
 
 
+        let evaluate(self, test_data: (Vector<double>*Vector<double>) list) =
+    //        """Return the number of test inputs for which the neural
+    //        network outputs the correct result. Note that the neural
+    //        network's output is assumed to be the index of whichever
+    //        neuron in the final layer has the highest activation."""
+             let test_results = [for (x, y) in test_data -> (Feedforward(x).MaximumIndex(), y.MaximumIndex())]
+                                |> List.map(fun (i1,i2) -> if i1 = i2 then 1 else 0 )
+             List.sum test_results
+
         member x.SGD (training_data, epochs, mini_batch_size, eta, test_data) =
-            printf "Hello\n"
+//            """Train the neural network using mini-batch stochastic
+//            gradient descent.  The ``training_data`` is a list of tuples
+//            ``(x, y)`` representing the training inputs and the desired
+//            outputs.  The other non-optional parameters are
+//            self-explanatory.  If ``test_data`` is provided then the
+//            network will be evaluated against the test data after each
+//            epoch, and partial progress printed out.  This is useful for
+//            tracking progress, but slows things down substantially."""
+
+            let rnd = new Random();
+            let timer = DateTime.Now;
+
+            let n_test = if test_data != null then test_data.Length else 0
+            let n = training_data.Length
+            for j in xrange(epochs) do
+                let shuffledTrainingData = shuffle training_data rnd
+                mini_batches = [training_data[k:k+mini_batch_size] for k in xrange(0, n, mini_batch_size)]
+                for mini_batch in mini_batches:
+                    self.update_mini_batch(mini_batch, eta)
+                if test_data:
+                    print "Epoch {0}: {1} / {2} ({3})".format(
+                        j, self.evaluate(test_data), n_test, (time.time() - start_time))
+                else:
+                print "Epoch {0} complete".format(j)
+
+                //todo use list partition previously adding tuples to list with random numbers and %
