@@ -23,7 +23,10 @@ type Network(sizes: int List) =
         let mutable weights = List.zip (List.take(numLayers-1) sizes) sizes.Tail |>
                               List.map (fun (sizeLeft, sizeRight) ->
                               Matrix.Build.Random(sizeRight, sizeLeft, new Normal()))
-
+        let mutable backPropTime = 0.0
+        let mutable evalTime = 0.0
+        let mutable ubmExtras = 0.0
+        let mutable nbwTime = 0.0
 //        #### Miscellaneous functions
         let Sigmoid(z:Vector<double>) =
 //            """The sigmoid function."""
@@ -48,7 +51,7 @@ type Network(sizes: int List) =
 //            let nabla_w_init = [for w in weights -> Matrix<double>.Build.Dense(w.RowCount,w.ColumnCount)]
 
 //            # feedforward
-
+            let bpStart = DateTime.Now
             let rec ffstart (biasesAndWeights: (Vector<double>*Matrix<double>) list) (zs: Vector<double> list)  (activations: Vector<double> list) (activation : Vector<double>) =
                 match biasesAndWeights with
                 | [] -> (zs, activations)
@@ -77,30 +80,37 @@ type Network(sizes: int List) =
                     let nabla_w = deltaNew.ToColumnMatrix() *a.ToRowMatrix()
                     ffend tail deltaNew (nabla_b::nb) (nabla_w::nw)
 
-            ffend zsActivationsAndWeights delta_init nabla_b_init nabla_w_init
+            let result = ffend zsActivationsAndWeights delta_init nabla_b_init nabla_w_init
+            backPropTime <- backPropTime + (DateTime.Now - bpStart).TotalSeconds
+            result
 
         let Update_mini_batch (mini_batch: (Vector<double>*Vector<double>) list) (eta: double) =
 //            """Update the network's weights and biases by applying
 //            gradient descent using backpropagation to a single mini batch.
 //            The ``mini_batch`` is a list of tuples ``(x, y)``, and ``eta``
 //            is the learning rate."""
-
+            let ubmInit = DateTime.Now
             let nabla_b_init = biases |> List.map(fun b -> Vector<double>.Build.Dense(b.Count));
             let nabla_w_init = weights|> List.map(fun w -> Matrix<double>.Build.Dense(w.RowCount,w.ColumnCount));
+            ubmExtras <- ubmExtras + (DateTime.Now - ubmInit).TotalSeconds
 
             let rec calculateNablas (mini_batch: (Vector<double>*Vector<double>) list) (nabla_b: Vector<double> list) (nabla_w: Matrix<double> list) =
                  match mini_batch with
                  | [] -> (nabla_b, nabla_w)
                  | (x,y)::tail ->
                     let (delta_nabla_b, delta_nabla_w) = Backprop x y
+                    let nbw = DateTime.Now
                     let n_b = [ for (nb, dnb) in  List.zip nabla_b delta_nabla_b -> (nb + dnb)]
                     let n_w = [ for (nw, dnw) in  List.zip nabla_w delta_nabla_w -> (nw + dnw)]
+                    nbwTime <- nbwTime + (DateTime.Now - nbw).TotalSeconds
                     calculateNablas tail n_b n_w
 
             let (nabla_b, nabla_w) = calculateNablas mini_batch nabla_b_init nabla_w_init
 
+            let wbCals = DateTime.Now
             weights <- [ for (w, nw) in List.zip weights nabla_w -> w-(eta/(double)mini_batch.Length)*nw ]
             biases <- [ for (b, nb) in  List.zip biases nabla_b -> b-(eta/(double)mini_batch.Length)*nb ]
+            ubmExtras <- ubmExtras + (DateTime.Now - wbCals).TotalSeconds
 
         let Feedforward(a:Vector<double>) =
 //            """Return the output of the network if ``a`` is input."""
@@ -113,13 +123,16 @@ type Network(sizes: int List) =
 
 
         let Evaluate(test_data: (Vector<double>*Vector<double>) []) =
+             let evStart = DateTime.Now
     //        """Return the number of test inputs for which the neural
     //        network outputs the correct result. Note that the neural
     //        network's output is assumed to be the index of whichever
     //        neuron in the final layer has the highest activation."""
              let test_results = [for (x, y) in test_data -> (Feedforward(x).MaximumIndex(), y.MaximumIndex())]
                                 |> List.map(fun (i1,i2) -> if i1 = i2 then 1 else 0 )
-             List.sum test_results
+             let result = List.sum test_results
+             evalTime <- evalTime + (DateTime.Now - evStart).TotalSeconds
+             result
 
         // shuffle an array (in-place)
         let shuffle a (rand:Random) =
@@ -150,7 +163,7 @@ type Network(sizes: int List) =
                 let mini_batches = List.chunkBySize mini_batch_size shuffledTrainingData
                 for mini_batch in mini_batches do
                     Update_mini_batch mini_batch eta
-                printf "Epoch %d: %d / %d (%f) \n" j (Evaluate(test_data)) n_test (DateTime.Now - startTime).TotalSeconds
-
+                printf "Epoch %d: %d / %d (%f) " j (Evaluate(test_data)) n_test (DateTime.Now - startTime).TotalSeconds
+                printf "BP: %f EV: %f UBME:%f NBW: %f \n" backPropTime evalTime ubmExtras nbwTime
 
 
