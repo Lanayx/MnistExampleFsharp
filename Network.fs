@@ -100,12 +100,16 @@ type Network(sizes: int List) =
                  | (x,y)::tail ->
                     let (delta_nabla_b, delta_nabla_w) = Backprop x y
                     let nbw = DateTime.Now
-                    let n_b = [ for (nb, dnb) in  List.zip nabla_b delta_nabla_b -> (nb + dnb)]
-                    let n_w = [ for (nw, dnw) in  List.zip nabla_w delta_nabla_w -> (nw + dnw)]
+                    let n_b = [ for (nb, dnb) in  List.zip nabla_b delta_nabla_b -> nb.Add(dnb,nb)
+                                                                                    nb]
+                    let n_w = [ for (nw, dnw) in  List.zip nabla_w delta_nabla_w -> nw.Add(dnw,nw)
+                                                                                    nw]
                     nbwTime <- nbwTime + (DateTime.Now - nbw).TotalSeconds
                     calculateNablas tail n_b n_w
 
             let (nabla_b, nabla_w) = calculateNablas mini_batch nabla_b_init nabla_w_init
+
+
 
             let wbCals = DateTime.Now
             weights <- [ for (w, nw) in List.zip weights nabla_w -> w-(eta/(double)mini_batch.Length)*nw ]
